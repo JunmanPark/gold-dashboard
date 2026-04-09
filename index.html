@@ -201,7 +201,7 @@ input[type=file]{display:none}
 <script>
 const SUPA_URL = 'https://nhtclrlnksfrjunhfwce.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odGNscmxua3Nmcmp1bmhmd2NlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMTA5MjEsImV4cCI6MjA5MDY4NjkyMX0.JHRRh7SklGw4ieCTakQ3EAVRokKNEbwV4K5Pmk-VHdQ';
-const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY, {auth:{detectSessionInUrl:true,persistSession:true}});
 let currentUser = null;
 </script>
 </head>
@@ -417,6 +417,13 @@ async function signOut(){
 }
 
 async function initAuth(){
+  // 處理 Google OAuth 回調（URL hash 含 access_token）
+  if(window.location.hash && window.location.hash.includes('access_token')){
+    // 讓 Supabase 從 hash 中解析 session，然後清除 hash
+    await supa.auth.getSession();
+    window.history.replaceState(null,'',window.location.pathname);
+  }
+
   const{data:{session}}=await supa.auth.getSession();
   if(session){
     currentUser=session.user;
@@ -436,6 +443,11 @@ async function initAuth(){
       document.getElementById('user-info').style.display='flex';
       document.getElementById('user-email').textContent=currentUser.email;
       updF();rAll();
+    }
+    if(event==='SIGNED_OUT'){
+      currentUser=null;
+      document.getElementById('login-overlay').style.display='flex';
+      document.getElementById('user-info').style.display='none';
     }
   });
 }
