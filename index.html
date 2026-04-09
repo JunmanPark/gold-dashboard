@@ -710,17 +710,24 @@ function todayKSTSig() { return toKSTDateSig(new Date().toISOString()); }
 function renderSigDateTabs() {
   const dates = [...new Set(sigSetups.map(s => toKSTDateSig(s.created_at)))].sort((a,b) => b.localeCompare(a));
   const today = todayKSTSig();
+  // 只在沒有選中日期時，才預設選第一個（最新）
   if (!sigSelectedDate && dates.length) sigSelectedDate = dates[0];
-  document.getElementById('sig-date-tabs').innerHTML = dates.map(d => `
-    <button class="sdtab ${d===today?'today':''} ${d===sigSelectedDate?'active':''}"
-      onclick="selectSigDate('${d}',this)">${d===today?'今日 '+d:d}</button>
-  `).join('');
+  // 若已選的日期不在列表中（資料更新後），重設為第一個
+  if (sigSelectedDate && dates.length && !dates.includes(sigSelectedDate)) sigSelectedDate = dates[0];
+  document.getElementById('sig-date-tabs').innerHTML = dates.map(d => {
+    const isToday = d === today;
+    const isActive = d === sigSelectedDate;
+    // 用 data-date 屬性傳遞日期，避免斜線在 onclick 字串中造成問題
+    return `<button class="sdtab${isToday?' today':''}${isActive?' active':''}" data-date="${d}" onclick="selectSigDate(this.dataset.date,this)">${isToday?'今日 '+d:d}</button>`;
+  }).join('');
 }
 
 function selectSigDate(date, btn) {
   sigSelectedDate = date;
-  document.querySelectorAll('.sdtab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  // 更新所有 tab 的 active 狀態
+  document.querySelectorAll('.sdtab').forEach(b => {
+    b.classList.toggle('active', b.dataset.date === date);
+  });
   renderSigCards(date);
 }
 
