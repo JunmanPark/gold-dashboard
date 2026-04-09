@@ -355,7 +355,75 @@ function apply(inc,fname,acc){const vs=ACCS[acc].chs;const fl=inc.filter(t=>vs.i
 function clrAcc(){if(!confirm(`確定清除【${ACCS[cur].name}】的所有數據？`))return;localStorage.removeItem(sk(cur));document.getElementById('abar').classList.remove('show');document.getElementById('stxt').textContent='尚未載入數據';rAll();}
 function pt5(str){if(!str||!str.trim())return null;const d=new Date(str.trim().replace(/\./g,'-'));return isNaN(d.getTime())?null:d;}
 function gsrc(c){const cu=(c||'').toUpperCase().trim();if(cu==='IN'||cu==='OUT')return '__SKIP__';if(cu.startsWith('SNIPER')||cu.startsWith('GS_')||cu.startsWith('GS'))return 'SNIPER';if(cu.startsWith('VIP'))return 'VIP';return 'EMPIRE';}
-function phtm(html){const doc=new DOMParser().parseFromString(html,'text/html');const res=[];for(const row of doc.querySelectorAll('tr')){const cells=[...row.querySelectorAll('td')].map(c=>c.textContent.trim()).filter(c=>c!=='');if(cells.length<14||!/^\d{4}\.\d{2}\.\d{2}/.test(cells[0])||!cells[2].match(/xauusd|gold|xau/i))continue;const type=cells[3].toLowerCase().trim();if(type!=='buy'&&type!=='sell')continue;const src=gsrc(cells[4]);if(!src||src==='__SKIP__')continue;const cm=parseFloat(cells[11])||0,sw=parseFloat(cells[12])||0,pr=parseFloat(cells[13]);const pnl=isNaN(pr)?null:r2(pr+cm+sw);const op=pt5(cells[0]),cl=pt5(cells[9]||'');if(!op)continue;res.push({open_time:op.toISOString(),close_time:cl?cl.toISOString():null,direction:type==='buy'?'BUY':'SELL',entry:r2(parseFloat(cells[6])||0),volume:parseFloat(cells[5])||0,pnl,status:cl?'closed':'open',source:src,comment:(cells[4]||'').toUpperCase()});}return res;}
+function phtm(html){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const res=[];
+  for(const row of doc.querySelectorAll('tr')){
+    const allCells=[...row.querySelectorAll('td')];
+    if(!allCells.length) continue;
+
+    // ── 方式A：Positions 區段（hidden colspan=8，可見13個td）──
+    const hiddenA=row.querySelector('td.hidden[colspan="8"]');
+    if(hiddenA){
+      const vis=allCells.filter(td=>!td.classList.contains('hidden'));
+      if(vis.length<13) continue;
+      const v=vis.map(td=>td.textContent.trim());
+      if(!/^\d{4}\.\d{2}\.\d{2}/.test(v[0])) continue;
+      if(!v[2].match(/xauusd|gold|xau/i)) continue;
+      const type=v[3].toLowerCase();
+      if(type!=='buy'&&type!=='sell') continue;
+      const comment=hiddenA.textContent.trim();
+      const src=gsrc(comment);
+      if(src==='__SKIP__') continue;
+      // profit 是最後一個 colspan=2 td
+      const profitTd=allCells.find(td=>td.getAttribute('colspan')==='2');
+      const pr=parseFloat(profitTd?profitTd.textContent.trim():v[12]);
+      const cm=parseFloat(v[10])||0, sw=parseFloat(v[11])||0;
+      const pnl=isNaN(pr)?null:r2(pr+cm+sw);
+      const op=pt5(v[0]), cl=pt5(v[8]||'');
+      if(!op) continue;
+      res.push({open_time:op.toISOString(),close_time:cl?cl.toISOString():null,
+        direction:type==='buy'?'BUY':'SELL',entry:r2(parseFloat(v[5])||0),
+        volume:parseFloat(v[4])||0,pnl,status:cl?'closed':'open',
+        source:src,comment:comment.toUpperCase()});
+      continue;
+    }
+
+    // ── 方式B：Deals 區段（hidden colspan=1，共15個td）──
+    const hiddenB=allCells.find(td=>td.classList.contains('hidden')&&!td.getAttribute('colspan'));
+    if(hiddenB){
+      const v=allCells.map(td=>td.textContent.trim());
+      if(v.length<15) continue;
+      if(!/^\d{4}\.\d{2}\.\d{2}/.test(v[0])) continue;
+      if(!v[2].match(/xauusd|gold|xau/i)) continue;
+      const type=v[3].toLowerCase();
+      if(type!=='buy'&&type!=='sell') continue;
+      const inOut=v[4].toLowerCase();
+      // 只取平倉(out)這行，避免重複計算
+      if(inOut!=='out') continue;
+      const comment=v[14]||'';
+      const src=gsrc(comment);
+      if(src==='__SKIP__') continue;
+      const pr=parseFloat(v[12]);
+      const pnl=isNaN(pr)?null:r2(pr);
+      const op=pt5(v[0]);
+      if(!op) continue;
+      const entry=parseFloat(v[6])||0;
+      const vol=parseFloat(v[5])||0;
+      res.push({open_time:op.toISOString(),close_time:op.toISOString(),
+        direction:type==='buy'?'BUY':'SELL',entry:r2(entry),
+        volume:vol,pnl,status:'closed',
+        source:src,comment:comment.toUpperCase()});
+    }
+  }
+  // 去重：同樣的 open_time+direction+entry+volume 只保留一筆
+  const seen=new Set();
+  return res.filter(t=>{
+    const k=`${t.open_time.slice(0,16)}|${t.direction}|${t.entry}|${t.volume}`;
+    if(seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+}
 function pxlsx(rows){const pm={};for(const cells of rows){if(!cells||cells.length<6)continue;let ti=-1;for(let i=0;i<cells.length;i++){if(/\d{4}[.\-\/]\d{2}[.\-\/]\d{2}/.test(String(cells[i]||''))){ti=i;break;}}if(ti<0)continue;const ts=String(cells[ti]||''),tk=String(cells[ti-1]||cells[0]||'');const type=String(cells[ti+1]||'').toLowerCase().trim(),sz=parseFloat(cells[ti+2])||0;const item=String(cells[ti+3]||''),price=parseFloat(cells[ti+4])||0;let pnl=NaN;for(let i=cells.length-1;i>=cells.length-4&&i>=0;i--){const v=parseFloat(cells[i]);if(!isNaN(v)){pnl=v;break;}}if(!item.match(/xauusd|gold|xau/i)||sz<=0)continue;const t=pt5(ts);if(!t)continue;if(type==='buy'||type==='sell'){const xsrc=gsrc(String(cells[ti-2]||''));if(xsrc==='__SKIP__')continue;pm[tk]={open_time:t.toISOString(),direction:type==='buy'?'BUY':'SELL',entry:r2(price),volume:sz,close_time:null,pnl:null,status:'open',source:xsrc||'OTHER',comment:String(cells[ti-2]||'').toUpperCase()};}else if(type.includes('close')||type==='t/p'||type==='s/l'){if(pm[tk]&&!pm[tk].close_time){pm[tk].close_time=t.toISOString();pm[tk].pnl=isNaN(pnl)?null:r2(pnl);pm[tk].status='closed';}}}return Object.values(pm).filter(p=>p.open_time);}
 function cst(arr){const cl=arr.filter(t=>t.status==='closed'&&t.pnl!=null);const w=cl.filter(t=>parseFloat(t.pnl)>0).length,l=cl.filter(t=>parseFloat(t.pnl)<=0).length,n=cl.length;const p=cl.reduce((s,t)=>s+parseFloat(t.pnl||0),0);const b=cl.length?Math.max(...cl.map(t=>parseFloat(t.pnl))):0,wo=cl.length?Math.min(...cl.map(t=>parseFloat(t.pnl))):0;return{total:n,wins:w,losses:l,wr:n?(w/n*100).toFixed(1):'—',pnl:r2(p),avg:n?r2(p/n):0,best:r2(b),worst:r2(wo)};}
 function swTab(tab,btn){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));document.getElementById('tp-'+tab).classList.add('active');btn.classList.add('active');if(tab==='daily')rPer('dg',gDay());if(tab==='weekly')rPer('wg',gWk());if(tab==='monthly')rPer('mg',gMo());}
