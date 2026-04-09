@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Signal Performance</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0D0D0D;--bg1:#0a0a0a;--bg2:#141414;--border:#2A2A2A;--border2:#333;--gold:#C9A84C;--gold-dim:rgba(201,168,76,.15);--gold-line:rgba(201,168,76,.3);--orange:#FF8C42;--orange-dim:rgba(255,140,66,.12);--orange-line:rgba(255,140,66,.28);--blue:#5C9EFF;--blue-dim:rgba(92,158,255,.12);--blue-line:rgba(92,158,255,.28);--purple:#B06EFF;--purple-dim:rgba(176,110,255,.12);--purple-line:rgba(176,110,255,.28);--green:#3DD68C;--red:#FF5C5C;--muted:#555;--muted2:#666680;--text:#E8E0D0;--text2:#998fa0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 32px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#0a0a0f,var(--bg));position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
+.logo{display:flex;align-items:baseline;gap:10px}
+.logo-main{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:3px;color:var(--gold)}
+.logo-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--muted2)}
+.hdr-right{display:flex;align-items:center;gap:8px}
+.btn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted2);padding:6px 14px;cursor:pointer;border-radius:2px;transition:all .2s}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn-red:hover{border-color:var(--red);color:var(--red)}
+#clock{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.acc-bar{display:flex;align-items:center;padding:0 32px;border-bottom:1px solid var(--border);background:var(--bg1)}
+.acc-btn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;padding:10px 18px;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .2s;color:var(--muted2)}
+.acc-btn:hover{color:var(--text2)}
+.acc-btn.al{color:var(--green);border-bottom-color:var(--green)}
+.acc-btn.ad{color:var(--gold);border-bottom-color:var(--gold)}
+.acc-dot{width:6px;height:6px;border-radius:50%}
+.acc-dot.live{background:var(--green);box-shadow:0 0 5px var(--green)}
+.acc-dot.demo{background:var(--gold)}
+.acc-cnt{font-size:10px;padding:1px 5px;border-radius:10px;background:var(--border2)}
+.acc-div{width:1px;height:18px;background:var(--border2);margin:0 4px}
+.sbar{display:flex;align-items:center;justify-content:space-between;padding:5px 32px;background:var(--bg1);border-bottom:1px solid var(--border)}
+.sl{display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2)}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--muted)}
+.sdot.on{background:var(--green);box-shadow:0 0 5px var(--green)}
+.abar{display:none;padding:7px 32px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--gold);background:rgba(201,168,76,.07);border-bottom:1px solid rgba(201,168,76,.2);letter-spacing:1px}
+.abar.show{display:block}
+.tband{display:none;border-bottom:1px solid var(--border)}
+.tband.show{display:grid}
+.tbl2{grid-template-columns:repeat(5,1fr)}
+.tbl3{grid-template-columns:repeat(6,1fr)}
+.tc{padding:11px 18px;border-right:1px solid var(--border);position:relative;overflow:hidden}
+.tc:last-child{border-right:none}
+.tc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:rgba(255,255,255,.05)}
+.tc.ce::before{background:var(--blue-line)}
+.tc.cs::before{background:var(--orange-line)}
+.tc.cv::before{background:var(--purple-line)}
+.tlbl{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:4px}
+.tval{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500}
+.tsub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted2);margin-top:2px}
+.ntabs{display:flex;padding:0 32px;border-bottom:1px solid var(--border);margin-top:14px;gap:2px}
+.tbtn{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:var(--muted2);background:none;border:none;padding:9px 15px;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tbtn:hover{color:var(--text2)}
+.tbtn.active{color:var(--gold);border-bottom-color:var(--gold)}
+.tp{display:none}.tp.active{display:block}
+main{padding:20px 32px 48px}
+.frow{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.fl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2)}
+.fb{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted2);padding:4px 12px;cursor:pointer;border-radius:2px;transition:all .15s}
+.fb:hover{border-color:var(--gold);color:var(--gold)}
+.fa{border-color:var(--text2);color:var(--text2)}
+.fe{border-color:var(--blue);color:var(--blue);background:var(--blue-dim)}
+.fs{border-color:var(--orange);color:var(--orange);background:var(--orange-dim)}
+.fv{border-color:var(--purple);color:var(--purple);background:var(--purple-dim)}
+.scrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:9px;margin-bottom:16px}
+.sc{background:var(--bg2);border:1px solid var(--border);padding:13px 16px;border-radius:2px;position:relative;overflow:hidden}
+.sc::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--gold-line),transparent)}
+.sclbl{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px}
+.scval{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:500}
+.tw{background:var(--bg2);border:1px solid var(--border);border-radius:2px;overflow:hidden;margin-bottom:22px}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg1);border-bottom:1px solid var(--border2)}
+th{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);padding:8px 12px;text-align:left}
+td{padding:11px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr:hover td{background:rgba(255,255,255,.015)}
+tbody tr:last-child td{border-bottom:none}
+.er{text-align:center;padding:28px;color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase}
+.bdg{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;padding:2px 6px;border-radius:2px;text-transform:uppercase;font-weight:600}
+.be{background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-line)}
+.bs{background:var(--orange-dim);color:var(--orange);border:1px solid var(--orange-line)}
+.bv{background:var(--purple-dim);color:var(--purple);border:1px solid var(--purple-line)}
+.bb{background:rgba(61,214,140,.1);color:var(--green);border:1px solid rgba(61,214,140,.2)}
+.bsl{background:rgba(255,92,92,.1);color:var(--red);border:1px solid rgba(255,92,92,.2)}
+.bop{background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+.pp{color:var(--green);font-weight:600}.pn{color:var(--red);font-weight:600}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:13px}
+.pcard{background:var(--bg2);border:1px solid var(--border);border-radius:3px;overflow:hidden}
+.pch{display:flex;align-items:center;justify-content:space-between;padding:11px 15px;background:var(--bg1);border-bottom:1px solid var(--border)}
+.pcl{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;color:var(--text)}
+.pcp{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600}
+.pcb{padding:9px 15px;border-bottom:1px solid var(--border)}
+.pcr{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.03);font-family:'IBM Plex Mono',monospace}
+.pcr:last-child{border-bottom:none}
+.pck{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:var(--muted2)}
+.pcv{font-size:14px}
+.wrw{padding:9px 15px;border-bottom:1px solid var(--border)}
+.wrl{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted2);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase}
+.wrt{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.wrf{height:100%;border-radius:2px;transition:width .6s ease}
+.pcsub{display:grid;grid-template-columns:1fr 1fr}
+.pcsub .sch{padding:11px 14px;border-right:1px solid var(--border);border-bottom:none}
+.pcsub .sch:last-child{border-right:none}
+.sch.se{background:linear-gradient(150deg,var(--blue-dim),transparent)}
+.sch.ss{background:linear-gradient(150deg,var(--orange-dim),transparent)}
+.sch.sv{background:linear-gradient(150deg,var(--purple-dim),transparent)}
+.sht{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-weight:600}
+.se .sht{color:var(--blue)}.ss .sht{color:var(--orange)}.sv .sht{color:var(--purple)}
+.shr{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;padding:2px 0}
+.shk{font-size:12px;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted2)}
+.shv{font-size:14px}
+.pce{background:var(--bg2);border:1px solid var(--border);border-radius:3px;display:flex;align-items:center;justify-content:space-between;padding:13px 15px;opacity:.4}
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:300;align-items:center;justify-content:center}
+.mbg.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:4px;padding:26px 30px;min-width:310px}
+.mtit{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;color:var(--gold);margin-bottom:16px}
+.mlbl{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:8px}
+.asel{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.aopt{border:1px solid var(--border2);border-radius:3px;padding:14px 10px;cursor:pointer;transition:all .2s;text-align:center;background:none;width:100%}
+.aopt:hover{border-color:var(--gold)}
+.aopt.sl{border-color:var(--green);background:rgba(61,214,140,.07)}
+.aopt.sd{border-color:var(--gold);background:var(--gold-dim)}
+.aopt .oi{font-size:22px;margin-bottom:6px}
+.aopt .on{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text)}
+.aopt .os{font-family:'IBM Plex Mono',monospace;font-size:8px;color:var(--muted2);margin-top:3px}
+.mbts{display:flex;gap:8px;justify-content:flex-end}
+.bcan{background:none;border:1px solid var(--border2);color:var(--muted2);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:7px 16px;cursor:pointer;border-radius:2px}
+.bcon{background:none;border:1px solid var(--gold);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;padding:7px 16px;cursor:pointer;border-radius:2px}
+.bcon:disabled{opacity:.3;cursor:not-allowed}
+.dov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:200;align-items:center;justify-content:center}
+.dov.show{display:flex}
+.din{border:1px dashed rgba(201,168,76,.4);border-radius:4px;padding:48px 72px;text-align:center}
+.din p{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:3px;text-transform:uppercase}
+.lbox{border:1px dashed var(--border2);border-radius:3px;padding:56px 20px;text-align:center;cursor:pointer;transition:border-color .2s}
+.lbox:hover{border-color:var(--gold)}
+.lbox .ic{font-size:28px;margin-bottom:10px;opacity:.2}
+.lbox p{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:2px;text-transform:uppercase}
+.lbox small{font-size:9px;color:var(--muted);display:block;margin-top:5px}
+input[type=file]{display:none}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(max-width:768px){header,.acc-bar,.sbar,main,.ntabs{padding-left:16px;padding-right:16px}.pgrid{grid-template-columns:1fr}.tbl2,.tbl3{grid-template-columns:repeat(3,1fr)}.asel{grid-template-columns:1fr}}
+
+/* ── 訊號記錄頁 ── */
+.sig-wrap{padding:20px 32px 48px}
+.sig-textarea{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:16px;padding:12px 14px;resize:vertical;min-height:90px;outline:none;transition:border-color .2s;margin-bottom:10px}
+.sig-textarea:focus{border-color:var(--gold)}
+.sig-parse-btn{font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:2px;text-transform:uppercase;background:var(--gold);border:none;color:#000;padding:8px 20px;cursor:pointer;border-radius:2px;font-weight:600;margin-bottom:20px}
+.sig-parse-btn:hover{opacity:.85}
+.sdtab{font-family:'IBM Plex Mono',monospace;font-size:14px;letter-spacing:1px;padding:5px 14px;border-radius:2px;border:1px solid var(--border2);background:none;cursor:pointer;color:var(--muted2);transition:all .2s}
+.sdtab:hover{border-color:var(--gold);color:var(--gold)}
+.sdtab.active{border-color:var(--gold);color:var(--gold);background:var(--gold-dim);font-weight:600}
+.sdtab.today{border-color:var(--green);color:var(--green)}
+.sdtab.today.active{background:rgba(61,214,140,.1)}
+.sig-date-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
+.sig-day-stats{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:22px}
+.sds{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:13px 16px}
+.sds-lbl{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px}
+.sds-val{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500}
+.setup-grid{display:flex;flex-direction:column;gap:11px}
+.scard{background:var(--bg2);border:1px solid var(--border);border-radius:3px;overflow:hidden;border-left:3px solid var(--border)}
+.scard.sp{border-left-color:var(--gold)}.scard.sa{border-left-color:var(--blue)}.scard.st{border-left-color:var(--purple)}.scard.sc{border-left-color:var(--muted);opacity:.55}.scard.sx{border-left-color:#333;opacity:.6}
+.scard-top{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 8px;border-bottom:1px solid var(--border)}
+.scard-tl{display:flex;align-items:center;gap:8px}
+.scard-tr{display:flex;align-items:center;gap:8px}
+.scard-num{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:var(--muted2)}
+.scard-body{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 16px}
+.sf-lbl{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:3px}
+.sf-val{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;color:var(--text)}
+.sf-val span{font-size:17px;color:var(--muted2)}
+.sf-val.sl-c{color:var(--red)}
+.scard-tp{display:flex;gap:6px;padding:7px 16px 11px;border-top:1px solid var(--border)}
+.tp-b{flex:1;background:var(--bg1);border:1px solid var(--border);border-radius:2px;padding:6px 8px;transition:all .3s}
+.tp-b.hit{background:rgba(61,214,140,.07);border-color:rgba(61,214,140,.3)}
+.tp-bl{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:2px}
+.tp-bl.hit{color:var(--green)}
+.tp-bv{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500;color:var(--text)}
+.tp-bv.hit{color:var(--green)}
+.scard-note{padding:5px 16px 8px;font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--muted2);border-top:1px solid var(--border)}
+.scard-actions{display:flex;gap:6px;padding:8px 16px;border-top:1px solid var(--border);flex-wrap:wrap}
+.sact{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:1px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted2);padding:3px 10px;cursor:pointer;border-radius:2px;transition:all .15s}
+.sact:hover{border-color:var(--gold);color:var(--gold)}
+.sact.del:hover{border-color:var(--red);color:var(--red)}
+.spill{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:1px;padding:2px 8px;border-radius:2px;text-transform:uppercase}
+.sp-buy{background:rgba(61,214,140,.1);color:var(--green);border:1px solid rgba(61,214,140,.2)}
+.sp-sell{background:rgba(255,92,92,.1);color:var(--red);border:1px solid rgba(255,92,92,.2)}
+.sp-st{font-size:12px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:20px;border:1px solid var(--border2);color:var(--muted2);font-family:'IBM Plex Mono',monospace}
+.sp-st.pend{border-color:rgba(201,168,76,.4);color:var(--gold);background:rgba(201,168,76,.07)}
+.sp-st.tp1{border-color:rgba(176,110,255,.4);color:var(--purple);background:rgba(176,110,255,.07)}
+.sctime{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted2)}
+.sig-preview{background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:14px 16px;margin-bottom:16px;display:none}
+.sig-preview.show{display:block}
+.sp-title{font-family:'IBM Plex Mono',monospace;font-size:14px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+.sp-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.sp-field{background:var(--bg1);border:1px solid var(--border);border-radius:2px;padding:8px 12px;flex:1;min-width:100px}
+.sp-flbl{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:3px;font-family:'IBM Plex Mono',monospace}
+.sp-fval input{background:none;border:none;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;width:100%;outline:none}
+.sp-confirm{font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:2px;text-transform:uppercase;background:var(--gold);border:none;color:#000;padding:7px 18px;cursor:pointer;border-radius:2px;font-weight:600}
+.sp-cancel{font-family:'IBM Plex Mono',monospace;font-size:15px;letter-spacing:2px;text-transform:uppercase;background:none;border:1px solid var(--border2);color:var(--muted2);padding:7px 18px;cursor:pointer;border-radius:2px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPA_URL = 'https://nhtclrlnksfrjunhfwce.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odGNscmxua3Nmcmp1bmhmd2NlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMTA5MjEsImV4cCI6MjA5MDY4NjkyMX0.JHRRh7SklGw4ieCTakQ3EAVRokKNEbwV4K5Pmk-VHdQ';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+let currentUser = null;
+</script>
+</head>
+<body>
+
+<div id="login-overlay" style="display:flex;position:fixed;inset:0;background:#0D0D0D;z-index:999;align-items:center;justify-content:center;flex-direction:column;gap:20px">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:4px;color:#C9A84C">GOLD SIGNAL</div>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:#555;margin-bottom:10px">Performance Tracker</div>
+  <button id="login-btn" onclick="signInWithGoogle()" style="display:flex;align-items:center;gap:10px;background:none;border:1px solid #333;color:#E8E0D0;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;padding:12px 24px;cursor:pointer;border-radius:3px;transition:all .2s">
+    <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+    使用 Google 帳號登入
+  </button>
+  <div id="login-status" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#555;letter-spacing:2px"></div>
+</div>
+<div class="mbg" id="modal">
+  <div class="modal">
+    <div class="mtit">選擇帳號</div>
+    <div class="mlbl">這份報告屬於哪個帳號？</div>
+    <div class="asel">
+      <button class="aopt" id="ol" onclick="selAcc('live')"><div class="oi">📈</div><div class="on">真實帳號</div><div class="os">9940267 · Empire · Snipers</div></button>
+      <button class="aopt" id="od" onclick="selAcc('demo')"><div class="oi">🧪</div><div class="on">模擬帳號</div><div class="os">52799450 · Snipers · VIP</div></button>
+    </div>
+    <div class="mbts">
+      <button class="bcan" onclick="closeM()">取消</button>
+      <button class="bcon" id="bcon" disabled onclick="doUpload()">確認上傳</button>
+    </div>
+  </div>
+</div>
+<div class="dov" id="dov"><div class="din"><div style="font-size:34px;margin-bottom:10px">📂</div><p>放開以載入 MT5 報告</p></div></div>
+<input type="file" id="fi" accept=".htm,.html,.xlsx,.xls">
+<header>
+  <div class="logo"><span class="logo-main">Gold Signal</span><span class="logo-sub">Performance</span></div>
+  <div class="hdr-right">
+    <div id="user-info" style="display:none;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#666680;letter-spacing:1px">
+      <div id="user-email" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button class="btn btn-red" onclick="signOut()" style="padding:4px 10px">登出</button>
+    </div>
+    <button class="btn" onclick="openM()">📂 匯入報告</button>
+    <button class="btn btn-red" id="bclr" style="display:none" onclick="clrAcc()">✕ 清除此帳號</button>
+    <div id="clock"></div>
+  </div>
+</header>
+<div class="acc-bar">
+  <button class="acc-btn" id="abl" onclick="swAcc('live')"><span class="acc-dot live"></span>真實帳號<span class="acc-cnt" id="cnl">0</span></button>
+  <div class="acc-div"></div>
+  <button class="acc-btn" id="abd" onclick="swAcc('demo')"><span class="acc-dot demo"></span>模擬帳號<span class="acc-cnt" id="cnd">0</span></button>
+</div>
+<div class="sbar">
+  <div class="sl"><div class="sdot" id="sdot"></div><span id="stxt">尚未載入數據</span></div>
+  <span id="rcnt" style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--muted2)"></span>
+</div>
+<div class="abar" id="abar"></div>
+<div class="tband" id="tband">
+  <div class="tc"><div class="tlbl">總開單</div><div class="tval" id="tt" style="color:var(--gold)">—</div></div>
+  <div class="tc"><div class="tlbl">總勝率</div><div class="tval" id="twr">—</div></div>
+  <div class="tc"><div class="tlbl">總盈虧</div><div class="tval" id="tpnl">—</div></div>
+  <div class="tc" id="tc1"><div class="tlbl" id="tl1">—</div><div class="tval" id="tv1">—</div><div class="tsub" id="ts1"></div></div>
+  <div class="tc" id="tc2"><div class="tlbl" id="tl2">—</div><div class="tval" id="tv2">—</div><div class="tsub" id="ts2"></div></div>
+  <div class="tc" id="tc3" style="display:none"><div class="tlbl" id="tl3">—</div><div class="tval" id="tv3">—</div><div class="tsub" id="ts3"></div></div>
+</div>
+<div class="ntabs">
+  <button class="tbtn active" onclick="swTab('history',this)">歷史記錄</button>
+  <button class="tbtn" onclick="swTab('daily',this)">日報</button>
+  <button class="tbtn" onclick="swTab('weekly',this)">週報</button>
+  <button class="tbtn" onclick="swTab('monthly',this)">月報</button>
+  <button class="tbtn" onclick="swTab('signals',this)">訊號記錄</button>
+</div>
+<main>
+  <div class="tp active" id="tp-history">
+    <div class="scrow" id="scrow"></div>
+    <div class="frow">
+      <span class="fl">頻道</span>
+      <button class="fb fa" id="f0" onclick="setF('all')">全部</button>
+      <button class="fb" id="f1" onclick="setF('c1')">—</button>
+      <button class="fb" id="f2" onclick="setF('c2')">—</button>
+      <button class="fb" id="f3" style="display:none" onclick="setF('c3')">—</button>
+    </div>
+    <div id="harea"><div class="lbox" onclick="openM()"><div class="ic">📊</div><p>點擊或拖拽 MT5 報告</p><small>HTM 或 XLSX 格式</small></div></div>
+  </div>
+  <div class="tp" id="tp-daily"><div class="pgrid" id="dg"></div></div>
+  <div class="tp" id="tp-weekly"><div class="pgrid" id="wg"></div></div>
+  <div class="tp" id="tp-monthly"><div class="pgrid" id="mg"></div></div>
+  <div class="tp" id="tp-signals">
+    <div class="sig-wrap">
+      <!-- 輸入區 -->
+      <textarea class="sig-textarea" id="sig-input" placeholder="貼上 Telegram 訊號訊息，例如：&#10;💵 BUY XAU/USD 4773 - 4776💵&#10;❌StopLoss: 4770&#10;✔️TakeProfit: 4780&#10;✔️TakeProfit: 4790 - 4800 - OPEN"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <button class="sig-parse-btn" onclick="parseSigInput()" style="margin-bottom:0">解析訊號</button>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px">貼上訊息後點解析，確認後儲存</span>
+      </div>
+      <!-- 預覽 -->
+      <div class="sig-preview" id="sig-preview">
+        <div class="sp-title">解析結果 — 請確認後儲存</div>
+        <div class="sp-row">
+          <div class="sp-field"><div class="sp-flbl">方向</div><div class="sp-fval"><input id="pf-dir" type="text"></div></div>
+          <div class="sp-field"><div class="sp-flbl">進場低</div><div class="sp-fval"><input id="pf-el" type="number"></div></div>
+          <div class="sp-field"><div class="sp-flbl">進場高</div><div class="sp-fval"><input id="pf-eh" type="number"></div></div>
+          <div class="sp-field"><div class="sp-flbl">止損 SL</div><div class="sp-fval"><input id="pf-sl" type="number"></div></div>
+        </div>
+        <div class="sp-row">
+          <div class="sp-field"><div class="sp-flbl">TP1</div><div class="sp-fval"><input id="pf-tp1" type="number"></div></div>
+          <div class="sp-field"><div class="sp-flbl">TP2</div><div class="sp-fval"><input id="pf-tp2" type="number"></div></div>
+          <div class="sp-field"><div class="sp-flbl">TP3</div><div class="sp-fval"><input id="pf-tp3" type="number" placeholder="選填"></div></div>
+          <div class="sp-field"><div class="sp-flbl">備註</div><div class="sp-fval"><input id="pf-note" type="text" placeholder="選填"></div></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="sp-confirm" onclick="saveSig()">✅ 確認儲存</button>
+          <button class="sp-cancel" onclick="closeSigPreview()">取消</button>
+        </div>
+      </div>
+      <!-- 日期頁籤 -->
+      <div class="sig-date-tabs" id="sig-date-tabs"></div>
+      <!-- 當天統計 -->
+      <div class="sig-day-stats" id="sig-day-stats"></div>
+      <!-- Setup 卡片 -->
+      <div class="setup-grid" id="sig-cards">
+        <div style="text-align:center;padding:40px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted2)">貼上訊號開始記錄</div>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const ACCS={live:{name:'真實帳號 (9940267)',chs:['EMPIRE','SNIPER']},demo:{name:'模擬帳號 (52799450)',chs:['SNIPER','VIP']}};
+const CST={EMPIRE:{cls:'be',col:'var(--blue)',sc:'se'},SNIPER:{cls:'bs',col:'var(--orange)',sc:'ss'},VIP:{cls:'bv',col:'var(--purple)',sc:'sv'}};
+let cur='live',flt='all',pendAcc=null,dropFile=null;
+const sk=a=>'gsp_v2_'+a;
+const save=(a,d)=>{try{localStorage.setItem(sk(a),JSON.stringify(d));}catch(e){}};
+const load=a=>{try{const r=localStorage.getItem(sk(a));return r?JSON.parse(r):[]; }catch(e){return[];}};
+const get=()=>load(cur);
+function merge(ex,inc){const k=t=>`${(t.open_time||'').slice(0,16)}|${t.direction}|${t.entry}|${t.volume}|${t.comment||''}`;const m=new Map();ex.forEach(t=>m.set(k(t),t));let a=0,s=0;inc.forEach(t=>{const kk=k(t);m.has(kk)?s++:(m.set(kk,t),a++);});return{merged:[...m.values()].sort((a,b)=>new Date(b.open_time)-new Date(a.open_time)),added:a,skipped:s};}
+function missing(tr){const cl=tr.filter(t=>t.status==='closed');if(cl.length<2)return[];const dy=new Set(cl.map(t=>fd(t.open_time)));const ms=[];const st=toK(cl[cl.length-1].open_time);const en=toK(cl[0].open_time);const c=new Date(st);c.setUTCHours(0,0,0,0);while(c<=en){const dw=c.getUTCDay();if(dw!==0&&dw!==6){const l=`${c.getUTCFullYear()}/${String(c.getUTCMonth()+1).padStart(2,'0')}/${String(c.getUTCDate()).padStart(2,'0')}`;if(!dy.has(l))ms.push(l);}c.setUTCDate(c.getUTCDate()+1);}return ms;}
+setInterval(()=>{const n=new Date();document.getElementById('clock').textContent=`${n.getFullYear()}/${String(n.getMonth()+1).padStart(2,'0')}/${String(n.getDate()).padStart(2,'0')} `+n.toLocaleTimeString('ko-KR',{hour12:false});},1000);
+const toK=iso=>new Date(new Date(iso).getTime()+9*3600*1000);
+const fd=iso=>{const k=toK(iso);return `${k.getUTCFullYear()}/${String(k.getUTCMonth()+1).padStart(2,'0')}/${String(k.getUTCDate()).padStart(2,'0')}`;};
+const ft=iso=>{const k=toK(iso);return `${String(k.getUTCHours()).padStart(2,'0')}:${String(k.getUTCMinutes()).padStart(2,'0')}`;};
+const r2=v=>Math.round(v*100)/100;
+const ps=v=>v>=0?`+${v.toFixed(2)}`:v.toFixed(2);
+const pc=v=>v>=0?'pp':'pn';
+function swAcc(a){cur=a;flt='all';document.getElementById('abl').className='acc-btn'+(a==='live'?' al':'');document.getElementById('abd').className='acc-btn'+(a==='demo'?' ad':'');updF();rAll();}
+function updF(){const chs=ACCS[cur].chs;['c1','c2','c3'].forEach((c,i)=>{const btn=document.getElementById('f'+(i+1));if(i<chs.length){const ch=chs[i];btn.textContent=ch;btn.style.display='inline-block';}else btn.style.display='none';});document.getElementById('tc3').style.display=chs.length>2?'':'none';document.getElementById('tband').className='tband'+(chs.length>2?' tbl3':' tbl2');chs.forEach((ch,i)=>{document.getElementById('tl'+(i+1)).textContent=ch+' 盈虧';const st=CST[ch];document.getElementById('tc'+(i+1)).className=`tc c${ch.toLowerCase()[0]}`;});}
+function openM(){document.getElementById('modal').classList.add('show');}
+function closeM(){document.getElementById('modal').classList.remove('show');pendAcc=null;dropFile=null;document.getElementById('ol').className='aopt';document.getElementById('od').className='aopt';document.getElementById('bcon').disabled=true;}
+function selAcc(a){pendAcc=a;document.getElementById('ol').className='aopt'+(a==='live'?' sl':'');document.getElementById('od').className='aopt'+(a==='demo'?' sd':'');document.getElementById('bcon').disabled=false;}
+function doUpload(){const a=pendAcc;closeM();if(dropFile){proc(dropFile,a);dropFile=null;}else{window._pa=a;document.getElementById('fi').click();}}
+document.getElementById('fi').addEventListener('change',function(){if(this.files[0]){proc(this.files[0],window._pa||cur);window._pa=null;this.value='';}});
+document.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('dov').classList.add('show');});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.getElementById('dov').classList.remove('show');});
+document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dov').classList.remove('show');if(e.dataTransfer.files[0]){dropFile=e.dataTransfer.files[0];openM();}});
+function proc(file,acc){const name=file.name.toLowerCase();if(name.endsWith('.xlsx')||name.endsWith('.xls')){const r=new FileReader();r.onload=e=>{try{const wb=XLSX.read(e.target.result,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];apply(pxlsx(XLSX.utils.sheet_to_json(ws,{header:1,defval:''})),file.name,acc);}catch(er){alert('XLSX:'+er.message);}};r.readAsArrayBuffer(file);}else{const r=new FileReader();r.onload=e=>{try{const b=new Uint8Array(e.target.result);const s=(b[0]===0xFF&&b[1]===0xFE)?2:0;apply(phtm(new TextDecoder('utf-16le').decode(b.slice(s))),file.name,acc);}catch(er){alert('HTM:'+er.message);}};r.readAsArrayBuffer(file);}}
+function apply(inc,fname,acc){const vs=ACCS[acc].chs;const fl=inc.filter(t=>vs.includes(t.source));if(!fl.length){alert(`此檔案中沒有 ${vs.join('/')} 的記錄`);return;}const{merged,added,skipped}=merge(load(acc),fl);save(acc,merged);cur=acc;document.getElementById('abl').className='acc-btn'+(acc==='live'?' al':'');document.getElementById('abd').className='acc-btn'+(acc==='demo'?' ad':'');const ms=missing(merged);const ab=document.getElementById('abar');if(ms.length){ab.textContent=`⚠️ 缺失數據：${ms.slice(0,5).join('、')}${ms.length>5?` 等 ${ms.length} 天`:''}  —  請確認是否需要補充上傳`;ab.classList.add('show');}else ab.classList.remove('show');document.getElementById('stxt').textContent=`【${ACCS[acc].name}】新增 ${added} 筆，重複略過 ${skipped} 筆 | ${fname}`;updF();rAll();}
+function clrAcc(){if(!confirm(`確定清除【${ACCS[cur].name}】的所有數據？`))return;localStorage.removeItem(sk(cur));document.getElementById('abar').classList.remove('show');document.getElementById('stxt').textContent='尚未載入數據';rAll();}
+function pt5(str){if(!str||!str.trim())return null;const d=new Date(str.trim().replace(/\./g,'-'));return isNaN(d.getTime())?null:d;}
+function gsrc(c){const cu=(c||'').toUpperCase();if(cu==='IN'||cu==='OUT')return '__SKIP__';if(cu.startsWith('EMPIRE')||cu.startsWith('SECOND'))return 'EMPIRE';if(cu.startsWith('SNIPER')||cu.startsWith('GS_')||cu.startsWith('GS'))return 'SNIPER';if(cu.startsWith('VIP'))return 'VIP';return null;}
+function phtm(html){const doc=new DOMParser().parseFromString(html,'text/html');const res=[];for(const row of doc.querySelectorAll('tr')){const cells=[...row.querySelectorAll('td')].map(c=>c.textContent.trim()).filter(c=>c!=='');if(cells.length<14||!/^\d{4}\.\d{2}\.\d{2}/.test(cells[0])||!cells[2].match(/xauusd|gold|xau/i))continue;const type=cells[3].toLowerCase().trim();if(type!=='buy'&&type!=='sell')continue;const src=gsrc(cells[4]);if(!src||src==='__SKIP__')continue;const cm=parseFloat(cells[11])||0,sw=parseFloat(cells[12])||0,pr=parseFloat(cells[13]);const pnl=isNaN(pr)?null:r2(pr+cm+sw);const op=pt5(cells[0]),cl=pt5(cells[9]||'');if(!op)continue;res.push({open_time:op.toISOString(),close_time:cl?cl.toISOString():null,direction:type==='buy'?'BUY':'SELL',entry:r2(parseFloat(cells[6])||0),volume:parseFloat(cells[5])||0,pnl,status:cl?'closed':'open',source:src,comment:(cells[4]||'').toUpperCase()});}return res;}
+function pxlsx(rows){const pm={};for(const cells of rows){if(!cells||cells.length<6)continue;let ti=-1;for(let i=0;i<cells.length;i++){if(/\d{4}[.\-\/]\d{2}[.\-\/]\d{2}/.test(String(cells[i]||''))){ti=i;break;}}if(ti<0)continue;const ts=String(cells[ti]||''),tk=String(cells[ti-1]||cells[0]||'');const type=String(cells[ti+1]||'').toLowerCase().trim(),sz=parseFloat(cells[ti+2])||0;const item=String(cells[ti+3]||''),price=parseFloat(cells[ti+4])||0;let pnl=NaN;for(let i=cells.length-1;i>=cells.length-4&&i>=0;i--){const v=parseFloat(cells[i]);if(!isNaN(v)){pnl=v;break;}}if(!item.match(/xauusd|gold|xau/i)||sz<=0)continue;const t=pt5(ts);if(!t)continue;if(type==='buy'||type==='sell'){const xsrc=gsrc(String(cells[ti-2]||''));if(xsrc==='__SKIP__')continue;pm[tk]={open_time:t.toISOString(),direction:type==='buy'?'BUY':'SELL',entry:r2(price),volume:sz,close_time:null,pnl:null,status:'open',source:xsrc||'OTHER',comment:String(cells[ti-2]||'').toUpperCase()};}else if(type.includes('close')||type==='t/p'||type==='s/l'){if(pm[tk]&&!pm[tk].close_time){pm[tk].close_time=t.toISOString();pm[tk].pnl=isNaN(pnl)?null:r2(pnl);pm[tk].status='closed';}}}return Object.values(pm).filter(p=>p.open_time);}
+function cst(arr){const cl=arr.filter(t=>t.status==='closed'&&t.pnl!=null);const w=cl.filter(t=>parseFloat(t.pnl)>0).length,l=cl.filter(t=>parseFloat(t.pnl)<=0).length,n=cl.length;const p=cl.reduce((s,t)=>s+parseFloat(t.pnl||0),0);const b=cl.length?Math.max(...cl.map(t=>parseFloat(t.pnl))):0,wo=cl.length?Math.min(...cl.map(t=>parseFloat(t.pnl))):0;return{total:n,wins:w,losses:l,wr:n?(w/n*100).toFixed(1):'—',pnl:r2(p),avg:n?r2(p/n):0,best:r2(b),worst:r2(wo)};}
+function swTab(tab,btn){document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));document.getElementById('tp-'+tab).classList.add('active');btn.classList.add('active');if(tab==='daily')rPer('dg',gDay());if(tab==='weekly')rPer('wg',gWk());if(tab==='monthly')rPer('mg',gMo());}
+function setF(s){flt=s;document.querySelectorAll('.fb').forEach(b=>b.className='fb');const chs=ACCS[cur].chs;if(s==='all'){document.getElementById('f0').className='fb fa';}else{const i={'c1':0,'c2':1,'c3':2}[s];if(i!==undefined&&chs[i]){const st=CST[chs[i]];document.getElementById('f'+(i+1)).className=`fb f${chs[i].toLowerCase()[0]}`;}}rHist();rStat();}
+function fdata(){const h=get();if(flt==='all')return h;const chs=ACCS[cur].chs;const i={'c1':0,'c2':1,'c3':2}[flt];if(i===undefined)return h;return h.filter(t=>t.source===chs[i]);}
+function rAll(){const h=get(),chs=ACCS[cur].chs;document.getElementById('cnl').textContent=load('live').length;document.getElementById('cnd').textContent=load('demo').length;const has=h.length>0;document.getElementById('sdot').className='sdot'+(has?' on':'');if(!has){document.getElementById('stxt').textContent='尚未載入數據';document.getElementById('bclr').style.display='none';}else document.getElementById('bclr').style.display='block';document.getElementById('tband').classList[has?'add':'remove']('show');if(has){const sc=cst(h);const wr=parseFloat(sc.wr);document.getElementById('tt').textContent=sc.total;const we=document.getElementById('twr');we.className='tval '+(wr>=50?'pp':'pn');we.textContent=sc.wr==='—'?'—':sc.wr+'%';const pe=document.getElementById('tpnl');pe.className='tval '+pc(sc.pnl);pe.textContent=ps(sc.pnl);chs.forEach((ch,i)=>{const s=cst(h.filter(t=>t.source===ch));const st=CST[ch];const v=document.getElementById('tv'+(i+1));v.textContent=s.total?ps(s.pnl):'—';v.style.color=st.col;document.getElementById('ts'+(i+1)).textContent=s.total?`${s.total}單 · ${s.wr}%`:'';});}chs.forEach((ch,i)=>{const b=document.getElementById('f'+(i+1));b.textContent=ch;b.style.display='inline-block';});document.getElementById('f3').style.display=chs.length>2?'inline-block':'none';rStat();rHist();}
+function rStat(){const el=document.getElementById('scrow');const d=fdata();if(!d.length){el.innerHTML='';return;}const s=cst(d);const wr=parseFloat(s.wr);el.innerHTML=`<div class="sc"><div class="sclbl">開單次數</div><div class="scval" style="color:var(--gold)">${s.total}</div></div><div class="sc"><div class="sclbl">勝率</div><div class="scval ${wr>=50?'pp':'pn'}">${s.wr==='—'?'—':s.wr+'%'}</div></div><div class="sc"><div class="sclbl">總盈虧</div><div class="scval ${pc(s.pnl)}">${ps(s.pnl)}</div></div><div class="sc"><div class="sclbl">平均每單</div><div class="scval ${pc(s.avg)}">${ps(s.avg)}</div></div><div class="sc"><div class="sclbl">最佳單</div><div class="scval pp">+${s.best.toFixed(2)}</div></div><div class="sc"><div class="sclbl">最差單</div><div class="scval pn">${s.worst.toFixed(2)}</div></div>`;}
+function rHist(){const area=document.getElementById('harea');const h=get();if(!h.length){area.innerHTML=`<div class="lbox" onclick="openM()"><div class="ic">📊</div><p>點擊或拖拽 MT5 報告</p><small>HTM 或 XLSX</small></div>`;return;}const d=fdata();const sB=s=>{const st=CST[s]||{cls:'bs'};return`<span class="bdg ${st.cls}">${s}</span>`;};const dB=d=>`<span class="bdg ${d==='BUY'?'bb':'bsl'}">${d}</span>`;const pD=t=>{if(t.status==='open'||t.pnl==null)return`<span class="bdg bop">進行中</span>`;const v=parseFloat(t.pnl);return`<span class="${v>=0?'pp':'pn'}">${v>=0?'+':''}${v.toFixed(2)}</span>`;};area.innerHTML=`<div class="tw"><table><thead><tr><th>日期 KST</th><th>時間</th><th>頻道</th><th>方向</th><th>進場</th><th>手數</th><th>盈虧</th><th>狀態</th><th>平倉</th></tr></thead><tbody>${!d.length?`<tr><td colspan="9" class="er">此篩選無記錄</td></tr>`:d.map(t=>`<tr><td>${fd(t.open_time)}</td><td>${ft(t.open_time)}</td><td>${sB(t.source)}</td><td>${dB(t.direction)}</td><td>${t.entry.toFixed(2)}</td><td>${t.volume}</td><td>${pD(t)}</td><td>${t.status==='open'?'<span class="bdg bop">進行中</span>':'<span style="color:var(--muted2);font-size:10px">已平倉</span>'}</td><td>${t.close_time?ft(t.close_time):'—'}</td></tr>`).join('')}</tbody></table></div>`;}
+function mkCard(lbl,ad){const s=cst(ad);const chs=ACCS[cur].chs;if(!s.total)return`<div class="pce"><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--text2)">${lbl}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2)">無記錄</span></div>`;const wr=s.wr==='—'?0:parseFloat(s.wr);const bc=wr>=50?'var(--green)':'var(--red)';const sub=ch=>{const sd=cst(ad.filter(t=>t.source===ch));const st=CST[ch];if(!sd.total)return`<div class="sch ${st.sc}"><div class="sht">${ch}</div><div style="font-size:9px;color:var(--muted2);letter-spacing:1px;text-transform:uppercase">無記錄</div></div>`;const sw=sd.wr==='—'?0:parseFloat(sd.wr);return`<div class="sch ${st.sc}"><div class="sht">${ch}</div><div class="shr"><span class="shk">開單</span><span class="shv" style="color:var(--gold)">${sd.total}</span></div><div class="shr"><span class="shk">勝率</span><span class="shv ${sw>=50?'pp':'pn'}">${sd.wr}${sd.wr!=='—'?'%':''}</span></div><div class="shr"><span class="shk">盈虧</span><span class="shv ${pc(sd.pnl)}">${ps(sd.pnl)}</span></div><div class="shr"><span class="shk">勝/敗</span><span class="shv"><span class="pp">${sd.wins}</span><span style="color:var(--muted2)"> / </span><span class="pn">${sd.losses}</span></span></div></div>`;};return`<div class="pcard"><div class="pch"><div class="pcl">${lbl}</div><div class="pcp ${pc(s.pnl)}">${ps(s.pnl)}</div></div><div class="pcb"><div class="pcr"><span class="pck">開單次數</span><span class="pcv" style="color:var(--gold)">${s.total}</span></div><div class="pcr"><span class="pck">獲利/虧損</span><span class="pcv"><span class="pp">${s.wins}</span><span style="color:var(--muted2)"> / </span><span class="pn">${s.losses}</span></span></div><div class="pcr"><span class="pck">勝率</span><span class="pcv ${wr>=50?'pp':'pn'}">${s.wr}${s.wr!=='—'?'%':''}</span></div><div class="pcr"><span class="pck">平均每單</span><span class="pcv ${pc(s.avg)}">${ps(s.avg)}</span></div><div class="pcr"><span class="pck">最佳/最差</span><span class="pcv"><span class="pp">+${s.best.toFixed(2)}</span><span style="color:var(--muted2)"> / </span><span class="pn">${s.worst.toFixed(2)}</span></span></div></div><div class="wrw"><div class="wrl"><span>勝率</span><span>${s.wr}${s.wr!=='—'?'%':''}</span></div><div class="wrt"><div class="wrf" style="width:${wr}%;background:${bc}"></div></div></div><div class="pcsub">${chs.map(ch=>sub(ch)).join('')}</div></div>`;}
+function rPer(gid,pers){const el=document.getElementById(gid);const h=get();if(!h.length){el.innerHTML=`<div class="lbox" style="cursor:default;grid-column:1/-1" onclick="openM()"><div class="ic">📂</div><p>請先匯入 MT5 報告</p></div>`;return;}el.innerHTML=pers.map((p,i)=>`<div style="animation:fi .25s ease ${i*25}ms both">${mkCard(p.label,h.filter(t=>{const d=new Date(t.open_time);return d>=p.start&&d<=p.end;}))}</div>`).join('');}
+function gDay(){const ps=[];for(let i=0;i<=13;i++){const d=new Date();d.setDate(d.getDate()-i);d.setHours(0,0,0,0);const e=new Date(d);e.setHours(23,59,59,999);ps.push({label:i===0?'今日':i===1?'昨日':`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`,start:new Date(d),end:e});}return ps;}
+function gWk(){const ps=[];for(let i=0;i>=-7;i--){const now=new Date(),day=now.getDay()||7;const m=new Date(now);m.setDate(now.getDate()-day+1+i*7);m.setHours(0,0,0,0);const s=new Date(m);s.setDate(m.getDate()+6);s.setHours(23,59,59,999);ps.push({label:i===0?'本週':i===-1?'上週':`${m.toLocaleDateString('zh-TW',{month:'short',day:'numeric'})} – ${s.toLocaleDateString('zh-TW',{month:'short',day:'numeric'})}`,start:m,end:s});}return ps;}
+function gMo(){const ps=[],n=new Date();for(let i=0;i>=-11;i--){const d=new Date(n.getFullYear(),n.getMonth()+i,1);ps.push({label:i===0?'本月':`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`,start:new Date(d.getFullYear(),d.getMonth(),1),end:new Date(d.getFullYear(),d.getMonth()+1,0,23,59,59)});}return ps;}
+// auth handled by initAuth()
+
+async function signInWithGoogle(){
+  document.getElementById('login-status').textContent='正在跳轉...';
+  const{error}=await supa.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:window.location.href}
+  });
+  if(error)document.getElementById('login-status').textContent='登入失敗：'+error.message;
+}
+
+async function signOut(){
+  await supa.auth.signOut();
+  currentUser=null;
+  document.getElementById('login-overlay').style.display='flex';
+  document.getElementById('user-info').style.display='none';
+}
+
+async function initAuth(){
+  const{data:{session}}=await supa.auth.getSession();
+  if(session){
+    currentUser=session.user;
+    document.getElementById('login-overlay').style.display='none';
+    document.getElementById('user-info').style.display='flex';
+    document.getElementById('user-email').textContent=currentUser.email;
+    updF();rAll();
+    const ms=missing(await getData());
+    if(ms.length){const ab=document.getElementById('abar');ab.textContent=`⚠️ 缺失數據：${ms.slice(0,5).join('、')}${ms.length>5?` 等 ${ms.length} 天`:''}  —  請確認是否需要補充上傳`;ab.classList.add('show');}
+  } else {
+    document.getElementById('login-overlay').style.display='flex';
+  }
+  supa.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session){
+      currentUser=session.user;
+      document.getElementById('login-overlay').style.display='none';
+      document.getElementById('user-info').style.display='flex';
+      document.getElementById('user-email').textContent=currentUser.email;
+      updF();rAll();
+    }
+  });
+}
+
+// Override save/load with Supabase
+async function getData(){
+  if(!currentUser)return[];
+  const{data,error}=await supa.from('trades').select('*')
+    .eq('user_id',currentUser.id)
+    .eq('account_type',cur)
+    .order('open_time',{ascending:false});
+  if(error){console.error(error);return[];}
+  return(data||[]).map(r=>({
+    open_time:r.open_time,close_time:r.close_time,
+    direction:r.direction,entry:parseFloat(r.entry||0),
+    volume:parseFloat(r.volume||0),pnl:r.pnl!=null?parseFloat(r.pnl):null,
+    status:r.status,source:r.source,comment:r.comment||''
+  }));
+}
+
+async function saveData(acc,trades){
+  if(!currentUser)return;
+  // upsert: delete existing + insert new (batch)
+  // Use merge with dedup key
+}
+
+async function apply(inc,fname,acc){
+  if(!currentUser){alert('請先登入');return;}
+  const vs=ACCS[acc].chs;
+  const fl=inc.filter(t=>vs.includes(t.source));
+  if(!fl.length){alert(`此檔案中沒有 ${vs.join('/')} 的記錄`);return;}
+
+  // 取得已有數據做去重
+  const{data:existing}=await supa.from('trades').select('open_time,direction,entry,volume,comment')
+    .eq('user_id',currentUser.id).eq('account_type',acc);
+  const k=t=>`${(t.open_time||'').slice(0,16)}|${t.direction}|${t.entry}|${t.volume}|${(t.comment||'').toUpperCase()}`;
+  const existKeys=new Set((existing||[]).map(k));
+  const toInsert=fl.filter(t=>!existKeys.has(k(t)));
+  const skipped=fl.length-toInsert.length;
+
+  if(toInsert.length>0){
+    const rows=toInsert.map(t=>({
+      user_id:currentUser.id,account_type:acc,
+      open_time:t.open_time,close_time:t.close_time||null,
+      direction:t.direction,entry:t.entry,volume:t.volume,
+      pnl:t.pnl,status:t.status,source:t.source,comment:t.comment||''
+    }));
+    const{error}=await supa.from('trades').insert(rows);
+    if(error){alert('儲存失敗：'+error.message);return;}
+  }
+
+  cur=acc;
+  document.getElementById('abl').className='acc-btn'+(acc==='live'?' al':'');
+  document.getElementById('abd').className='acc-btn'+(acc==='demo'?' ad':'');
+  const allData=await getData();
+  const ms=missing(allData);
+  const ab=document.getElementById('abar');
+  if(ms.length){ab.textContent=`⚠️ 缺失數據：${ms.slice(0,5).join('、')}${ms.length>5?` 等 ${ms.length} 天`:''} — 請確認補充上傳`;ab.classList.add('show');}
+  else ab.classList.remove('show');
+  document.getElementById('stxt').textContent=`【${ACCS[acc].name}】新增 ${toInsert.length} 筆，重複略過 ${skipped} 筆 | ${fname}`;
+  updF();rAll();
+}
+
+async function clrAcc(){
+  if(!currentUser)return;
+  if(!confirm(`確定清除【${ACCS[cur].name}】的所有數據？`))return;
+  const{error}=await supa.from('trades').delete().eq('user_id',currentUser.id).eq('account_type',cur);
+  if(error){alert('清除失敗：'+error.message);return;}
+  document.getElementById('abar').classList.remove('show');
+  document.getElementById('stxt').textContent='尚未載入數據';
+  rAll();
+}
+
+async function swAcc(a){
+  cur=a;flt='all';
+  document.getElementById('abl').className='acc-btn'+(a==='live'?' al':'');
+  document.getElementById('abd').className='acc-btn'+(a==='demo'?' ad':'');
+  updF();
+  rAll();
+}
+
+// Override rAll to be async
+const _origRAll=rAll;
+async function rAll(){
+  const h=await getData();
+  const chs=ACCS[cur].chs;
+  const liveData=currentUser?(await supa.from('trades').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id).eq('account_type','live')):null;
+  const demoData=currentUser?(await supa.from('trades').select('id',{count:'exact',head:true}).eq('user_id',currentUser.id).eq('account_type','demo')):null;
+  document.getElementById('cnl').textContent=liveData?.count||0;
+  document.getElementById('cnd').textContent=demoData?.count||0;
+  const has=h.length>0;
+  document.getElementById('sdot').className='sdot'+(has?' on':'');
+  if(!has){document.getElementById('stxt').textContent='尚未載入數據';document.getElementById('bclr').style.display='none';}
+  else document.getElementById('bclr').style.display='block';
+  document.getElementById('tband').classList[has?'add':'remove']('show');
+  if(has){
+    const sc=cst(h);const wr=parseFloat(sc.wr);
+    document.getElementById('tt').textContent=sc.total;
+    const we=document.getElementById('twr');we.className='tval '+(wr>=50?'pp':'pn');we.textContent=sc.wr==='—'?'—':sc.wr+'%';
+    const pe=document.getElementById('tpnl');pe.className='tval '+pc(sc.pnl);pe.textContent=ps(sc.pnl);
+    chs.forEach((ch,i)=>{const s=cst(h.filter(t=>t.source===ch));const st=CST[ch];const v=document.getElementById('tv'+(i+1));v.textContent=s.total?ps(s.pnl):'—';v.style.color=st.col;document.getElementById('ts'+(i+1)).textContent=s.total?`${s.total}單 · ${s.wr}%`:'';});
+  }
+  chs.forEach((ch,i)=>{const b=document.getElementById('f'+(i+1));b.textContent=ch;b.style.display='inline-block';});
+  document.getElementById('f3').style.display=chs.length>2?'inline-block':'none';
+  await rStat(h);await rHist(h);
+}
+
+async function rStat(h){
+  if(!h)h=await getData();
+  const el=document.getElementById('scrow');
+  const fd=flt==='all'?h:h.filter(t=>{const chs=ACCS[cur].chs;const i={'c1':0,'c2':1,'c3':2}[flt];return i!==undefined?t.source===chs[i]:true;});
+  if(!fd.length){el.innerHTML='';return;}
+  const s=cst(fd);const wr=parseFloat(s.wr);
+  el.innerHTML=`<div class="sc"><div class="sclbl">開單次數</div><div class="scval" style="color:var(--gold)">${s.total}</div></div><div class="sc"><div class="sclbl">勝率</div><div class="scval ${wr>=50?'pp':'pn'}">${s.wr==='—'?'—':s.wr+'%'}</div></div><div class="sc"><div class="sclbl">總盈虧</div><div class="scval ${pc(s.pnl)}">${ps(s.pnl)}</div></div><div class="sc"><div class="sclbl">平均每單</div><div class="scval ${pc(s.avg)}">${ps(s.avg)}</div></div><div class="sc"><div class="sclbl">最佳單</div><div class="scval pp">+${s.best.toFixed(2)}</div></div><div class="sc"><div class="sclbl">最差單</div><div class="scval pn">${s.worst.toFixed(2)}</div></div>`;
+}
+
+async function rHist(h){
+  if(!h)h=await getData();
+  const area=document.getElementById('harea');
+  if(!h.length){area.innerHTML=`<div class="lbox" onclick="openM()"><div class="ic">📊</div><p>點擊或拖拽 MT5 報告</p><small>HTM 或 XLSX</small></div>`;return;}
+  const fd=flt==='all'?h:h.filter(t=>{const chs=ACCS[cur].chs;const i={'c1':0,'c2':1,'c3':2}[flt];return i!==undefined?t.source===chs[i]:true;});
+  const sB=s=>{const st=CST[s]||{cls:'bs'};return`<span class="bdg ${st.cls}">${s}</span>`;};
+  const dB=d=>`<span class="bdg ${d==='BUY'?'bb':'bsl'}">${d}</span>`;
+  const pD=t=>{if(t.status==='open'||t.pnl==null)return`<span class="bdg bop">進行中</span>`;const v=parseFloat(t.pnl);return`<span class="${v>=0?'pp':'pn'}">${v>=0?'+':''}${v.toFixed(2)}</span>`;};
+  area.innerHTML=`<div class="tw"><table><thead><tr><th>日期 KST</th><th>時間</th><th>頻道</th><th>方向</th><th>進場</th><th>手數</th><th>盈虧</th><th>狀態</th><th>平倉</th></tr></thead><tbody>${!fd.length?`<tr><td colspan="9" class="er">此篩選無記錄</td></tr>`:fd.map(t=>`<tr><td>${fd_(t.open_time)}</td><td>${ft_(t.open_time)}</td><td>${sB(t.source)}</td><td>${dB(t.direction)}</td><td>${parseFloat(t.entry).toFixed(2)}</td><td>${t.volume}</td><td>${pD(t)}</td><td>${t.status==='open'?'<span class="bdg bop">進行中</span>':'<span style="color:var(--muted2);font-size:10px">已平倉</span>'}</td><td>${t.close_time?ft_(t.close_time):'—'}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function fd_(iso){const k=toK(iso);return `${k.getUTCFullYear()}/${String(k.getUTCMonth()+1).padStart(2,'0')}/${String(k.getUTCDate()).padStart(2,'0')}`;}
+function ft_(iso){const k=toK(iso);return `${String(k.getUTCHours()).padStart(2,'0')}:${String(k.getUTCMinutes()).padStart(2,'0')}`;}
+
+async function swTab(tab,btn){
+  document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(tab==='signals'){
+    document.getElementById('tp-signals').classList.add('active');
+    await loadSigSetups();
+    return;
+  }
+  document.getElementById('tp-'+tab).classList.add('active');
+  const h=await getData();
+  if(tab==='daily')rPer('dg',gDay(),h);
+  if(tab==='weekly')rPer('wg',gWk(),h);
+  if(tab==='monthly')rPer('mg',gMo(),h);
+}
+
+async function rPer(gid,pers,h){
+  if(!h)h=await getData();
+  const el=document.getElementById(gid);
+  if(!h.length){el.innerHTML=`<div class="lbox" style="cursor:default;grid-column:1/-1" onclick="openM()"><div class="ic">📂</div><p>請先匯入 MT5 報告</p></div>`;return;}
+  el.innerHTML=pers.map((p,i)=>`<div style="animation:fi .25s ease ${i*25}ms both">${mkCard(p.label,h.filter(t=>{const d=new Date(t.open_time);return d>=p.start&&d<=p.end;}))}</div>`).join('');
+}
+
+async function setF(s){
+  flt=s;
+  document.querySelectorAll('.fb').forEach(b=>b.className='fb');
+  const chs=ACCS[cur].chs;
+  if(s==='all'){document.getElementById('f0').className='fb fa';}
+  else{const i={'c1':0,'c2':1,'c3':2}[s];if(i!==undefined&&chs[i]){document.getElementById('f'+(i+1)).className=`fb f${chs[i].toLowerCase()[0]}`;}}
+  const h=await getData();
+  await rStat(h);await rHist(h);
+}
+
+
+// ══════════════════════════════════════════════
+// 訊號記錄系統
+// ══════════════════════════════════════════════
+const SIG_TABLE = 'signals';
+let sigSetups = [], sigSelectedDate = null;
+
+// 解析 Telegram 訊息
+function parseTelegramMsg(text) {
+  const t = text.toUpperCase();
+  const result = { direction: null, entry_low: null, entry_high: null, sl: null, tps: [], note: '' };
+
+  // 方向
+  if (/BUY/.test(t)) result.direction = 'BUY';
+  else if (/SELL/.test(t)) result.direction = 'SELL';
+
+  // 進場區間 XAU/USD XXXX - XXXX
+  const entryM = text.match(/XAU[/\s]?USD[\s]+([\d.]+)[\s]*[-–][\s]*([\d.]+)/i);
+  if (entryM) {
+    const v1 = parseFloat(entryM[1]), v2 = parseFloat(entryM[2]);
+    result.entry_low  = Math.min(v1, v2);
+    result.entry_high = Math.max(v1, v2);
+  }
+
+  // SL
+  const slM = text.match(/(?:StopLoss|Stop Loss|SL)[:\s]+([\d.]+)/i);
+  if (slM) result.sl = parseFloat(slM[1]);
+
+  // TPs — 每行含 TakeProfit 或 TP
+  const lines = text.split('\n');
+  const notes = [];
+  lines.forEach(line => {
+    if (/takeprofit|take profit/i.test(line)) {
+      // 提取所有數字
+      const nums = line.match(/[\d.]{4,}/g);
+      if (nums) {
+        result.tps.push(parseFloat(nums[0]));
+        // 如果有範圍如 4790 - 4800，記入 note
+        if (nums.length >= 2) {
+          notes.push(`TP${result.tps.length} 範圍: ${nums.join(' - ')}`);
+        }
+      }
+      if (/OPEN/i.test(line)) notes.push(`TP${result.tps.length} OPEN`);
+    }
+  });
+  result.note = notes.join(' | ');
+  return result;
+}
+
+function parseSigInput() {
+  const text = document.getElementById('sig-input').value.trim();
+  if (!text) return alert('請貼上訊號訊息');
+  const r = parseTelegramMsg(text);
+  if (!r.direction) return alert('無法識別方向（BUY/SELL）');
+
+  document.getElementById('pf-dir').value  = r.direction || '';
+  document.getElementById('pf-el').value   = r.entry_low  || '';
+  document.getElementById('pf-eh').value   = r.entry_high || '';
+  document.getElementById('pf-sl').value   = r.sl         || '';
+  document.getElementById('pf-tp1').value  = r.tps[0]     || '';
+  document.getElementById('pf-tp2').value  = r.tps[1]     || '';
+  document.getElementById('pf-tp3').value  = r.tps[2]     || '';
+  document.getElementById('pf-note').value = r.note       || '';
+  document.getElementById('sig-preview').classList.add('show');
+}
+
+function closeSigPreview() {
+  document.getElementById('sig-preview').classList.remove('show');
+}
+
+async function saveSig() {
+  if (!currentUser) return alert('請先登入');
+  const record = {
+    id:          `MANUAL_${Date.now()}`,
+    channel:     'EMPIRE',
+    direction:   document.getElementById('pf-dir').value.toUpperCase(),
+    entry_low:   parseFloat(document.getElementById('pf-el').value)  || 0,
+    entry_high:  parseFloat(document.getElementById('pf-eh').value) || 0,
+    sl:          parseFloat(document.getElementById('pf-sl').value)  || 0,
+    tp1:         parseFloat(document.getElementById('pf-tp1').value) || 0,
+    tp2:         parseFloat(document.getElementById('pf-tp2').value) || 0,
+    tp3:         parseFloat(document.getElementById('pf-tp3').value) || null,
+    note:        document.getElementById('pf-note').value || '',
+    status:      'PENDING',
+    tp1_hit:     false,
+    tp2_hit:     false,
+    tp3_hit:     false,
+    created_at:  new Date().toISOString(),
+    updated_at:  new Date().toISOString(),
+  };
+  const { error } = await supa.from(SIG_TABLE).insert(record);
+  if (error) return alert('儲存失敗: ' + error.message);
+  closeSigPreview();
+  document.getElementById('sig-input').value = '';
+  await loadSigSetups();
+  alert('✅ 訊號已儲存');
+}
+
+async function updateSigStatus(id, status) {
+  const extra = {};
+  let realStatus = status;
+  if (status === 'TP1_HIT')   { extra.tp1_hit = true; realStatus = 'TP1_HIT'; }
+  if (status === 'TP2_HIT')   { extra.tp1_hit = true; extra.tp2_hit = true; realStatus = 'TP2_HIT'; }
+  if (status === 'TP3_HIT')   { extra.tp1_hit = true; extra.tp2_hit = true; extra.tp3_hit = true; realStatus = 'TP3_HIT'; }
+  if (status === 'BREAKEVEN') { realStatus = 'ACTIVE'; }
+  if (status === 'SL_HIT')    { realStatus = 'CLOSED'; }
+  await supa.from(SIG_TABLE).update({ status: realStatus, ...extra, updated_at: new Date().toISOString() }).eq('id', id);
+  await loadSigSetups();
+}
+
+async function deleteSig(id) {
+  if (!confirm('確定刪除這筆訊號？')) return;
+  await supa.from(SIG_TABLE).delete().eq('id', id);
+  await loadSigSetups();
+}
+
+async function loadSigSetups() {
+  const { data } = await supa.from(SIG_TABLE).select('*').eq('channel', 'EMPIRE').order('created_at', { ascending: false }).limit(200);
+  sigSetups = data || [];
+  renderSigDateTabs();
+  if (sigSelectedDate) renderSigCards(sigSelectedDate);
+  else if (sigSetups.length) {
+    sigSelectedDate = toKSTDateSig(sigSetups[0].created_at);
+    renderSigCards(sigSelectedDate);
+  }
+}
+
+function toKSTDateSig(iso) {
+  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000);
+  return `${d.getUTCFullYear()}/${String(d.getUTCMonth()+1).padStart(2,'0')}/${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+function toKSTTimeSig(iso) {
+  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000);
+  return `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}`;
+}
+function todayKSTSig() { return toKSTDateSig(new Date().toISOString()); }
+
+function renderSigDateTabs() {
+  const dates = [...new Set(sigSetups.map(s => toKSTDateSig(s.created_at)))].sort((a,b) => b.localeCompare(a));
+  const today = todayKSTSig();
+  if (!sigSelectedDate && dates.length) sigSelectedDate = dates[0];
+  document.getElementById('sig-date-tabs').innerHTML = dates.map(d => `
+    <button class="sdtab ${d===today?'today':''} ${d===sigSelectedDate?'active':''}"
+      onclick="selectSigDate('${d}',this)">${d===today?'今日 '+d:d}</button>
+  `).join('');
+}
+
+function selectSigDate(date, btn) {
+  sigSelectedDate = date;
+  document.querySelectorAll('.sdtab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderSigCards(date);
+}
+
+const SIG_ST_LABEL = { PENDING:'進行中', ACTIVE:'保本完成', TP1_HIT:'TP1✓', TP2_HIT:'TP2✓', TP3_HIT:'TP3✓', CANCELLED:'取消', CLOSED:'止損/平倉' };
+const SIG_ST_CLS   = { PENDING:'sp', ACTIVE:'sx', TP1_HIT:'st', TP2_HIT:'st', TP3_HIT:'st', CANCELLED:'sc', CLOSED:'sx' };
+const SIG_ST_PILL  = { PENDING:'pend', ACTIVE:'canc', TP1_HIT:'tp1', TP2_HIT:'tp1', TP3_HIT:'tp1', CANCELLED:'canc', CLOSED:'canc' };
+
+function renderSigCards(date) {
+  const items = sigSetups.filter(s => toKSTDateSig(s.created_at) === date);
+
+  // 統計
+  // 計算盈利：TP1=tp1值, TP2=tp2值, TP3=tp3值加總
+  const calcProfit = (s) => {
+    let p = 0;
+    if (s.tp1_hit && s.tp1) p += (+s.tp1);
+    if (s.tp2_hit && s.tp2) p += (+s.tp2);
+    if (s.tp3_hit && s.tp3) p += (+s.tp3);
+    return p;
+  };
+  const totalProfit = items.filter(s => s.tp1_hit || s.tp2_hit || s.tp3_hit)
+    .reduce((sum, s) => {
+      const tps = [];
+      if (s.tp1_hit && s.tp1) tps.push(+s.tp1);
+      if (s.tp2_hit && s.tp2) tps.push(+s.tp2);
+      if (s.tp3_hit && s.tp3) tps.push(+s.tp3);
+      return sum + tps.reduce((a,b)=>a+b,0);
+    }, 0);
+
+  document.getElementById('sig-day-stats').innerHTML = `
+    <div class="sds"><div class="sds-lbl">總訊號</div><div class="sds-val" style="color:var(--gold)">${items.length}</div></div>
+    <div class="sds"><div class="sds-lbl">TP1 ✓</div><div class="sds-val" style="color:var(--purple)">${items.filter(s=>s.tp1_hit).length}</div></div>
+    <div class="sds"><div class="sds-lbl">TP2 ✓</div><div class="sds-val" style="color:var(--purple)">${items.filter(s=>s.tp2_hit).length}</div></div>
+    <div class="sds"><div class="sds-lbl">TP3 ✓</div><div class="sds-val" style="color:var(--purple)">${items.filter(s=>s.tp3_hit).length}</div></div>
+    <div class="sds"><div class="sds-lbl">保本</div><div class="sds-val" style="color:var(--blue)">${items.filter(s=>s.status==='ACTIVE').length}</div></div>
+    <div class="sds"><div class="sds-lbl">取消</div><div class="sds-val">${items.filter(s=>s.status==='CANCELLED').length}</div></div>
+    <div class="sds"><div class="sds-lbl">止損</div><div class="sds-val" style="color:var(--red)">${items.filter(s=>s.status==='CLOSED').length}</div></div>
+    <div class="sds"><div class="sds-lbl">TP 總點數</div><div class="sds-val" style="color:var(--green)">${totalProfit > 0 ? totalProfit.toFixed(0) : '0'}</div></div>
+  `;
+
+  const el = document.getElementById('sig-cards');
+  if (!items.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;font-family:IBM Plex Mono,monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--muted2)">當天無訊號</div>';
+    return;
+  }
+
+  el.innerHTML = items.map((s, i) => {
+    const dirCls = s.direction === 'BUY' ? 'sp-buy' : 'sp-sell';
+    const stCls  = SIG_ST_CLS[s.status]  || 'sp';
+    const stLbl  = SIG_ST_LABEL[s.status] || s.status;
+    const stPill = SIG_ST_PILL[s.status]  || '';
+    const tp3html = s.tp3 ? `
+      <div class="tp-b ${s.tp3_hit?'hit':''}">
+        <div class="tp-bl ${s.tp3_hit?'hit':''}">TP3${s.tp3_hit?' ✓':''}</div>
+        <div class="tp-bv ${s.tp3_hit?'hit':''}">${(+s.tp3).toFixed(2)}</div>
+      </div>` : '';
+    const noteHtml = s.note ? `<div class="scard-note">📝 ${s.note}</div>` : '';
+    const ctime = toKSTTimeSig(s.created_at);
+
+    // 動作按鈕 — 固定顯示所有操作
+    const actions = `
+      <button class="sact" onclick="updateSigStatus('${s.id}','TP1_HIT')">TP1</button>
+      <button class="sact" onclick="updateSigStatus('${s.id}','TP2_HIT')">TP2</button>
+      <button class="sact" onclick="updateSigStatus('${s.id}','TP3_HIT')">TP3</button>
+      <button class="sact" onclick="updateSigStatus('${s.id}','BREAKEVEN')">保本</button>
+      <button class="sact" onclick="updateSigStatus('${s.id}','CANCELLED')">取消</button>
+      <button class="sact" onclick="updateSigStatus('${s.id}','SL_HIT')">止損</button>
+      <button class="sact del" onclick="deleteSig('${s.id}')">刪除</button>
+    `;
+
+    return `<div class="scard ${stCls}">
+      <div class="scard-top">
+        <div class="scard-tl">
+          <span class="scard-num">Setup #${items.length - i}</span>
+          <span class="spill ${dirCls}">${s.direction}</span>
+        </div>
+        <div class="scard-tr">
+          <span class="sctime">${ctime}</span>
+          <span class="sp-st ${stPill}">${stLbl}</span>
+        </div>
+      </div>
+      <div class="scard-body">
+        <div><div class="sf-lbl">進場區間</div><div class="sf-val">${(+s.entry_low).toFixed(0)} <span>— ${(+s.entry_high).toFixed(0)}</span></div></div>
+        <div><div class="sf-lbl">止損 SL</div><div class="sf-val sl-c">${(+s.sl).toFixed(2)}</div></div>
+      </div>
+      <div class="scard-tp">
+        <div class="tp-b ${s.tp1_hit?'hit':''}">
+          <div class="tp-bl ${s.tp1_hit?'hit':''}">TP1${s.tp1_hit?' ✓':''}</div>
+          <div class="tp-bv ${s.tp1_hit?'hit':''}">${(+s.tp1).toFixed(2)}</div>
+        </div>
+        <div class="tp-b ${s.tp2_hit?'hit':''}">
+          <div class="tp-bl ${s.tp2_hit?'hit':''}">TP2${s.tp2_hit?' ✓':''}</div>
+          <div class="tp-bv ${s.tp2_hit?'hit':''}">${(+s.tp2).toFixed(2)}</div>
+        </div>
+        ${tp3html}
+      </div>
+      ${noteHtml}
+      <div class="scard-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+
+
+initAuth();
+
+</script>
+</body>
+</html>
