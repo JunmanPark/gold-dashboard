@@ -775,37 +775,35 @@ function renderSigCards(date) {
   const items = sigSetups.filter(s => toKSTDateSig(s.created_at) === date);
 
   // ── 盈虧計算 ──
-  // 0.05手×3張，每到TP減1張
-  // 黃金：1點 = 0.05手 × 10 USD/手/點 = 0.5 USD
-  const PIP_VAL = 0.5; // 每1點盈虧（0.05手）
+  // 每點盈虧 = 距離 × 0.05手 × 100 = 距離 × 5 USD
+  // TP1: 1張平倉，TP2: 再平1張（累計TP1+TP2距離），TP3: 再平1張（累計全部）
+  // 止損: 3張全虧
+  const UNIT = 5; // 0.05手 × 100
 
   function calcPnl(s) {
     const isBuy = s.direction === 'BUY';
     const entry = isBuy ? +s.entry_high : +s.entry_low;
-    const sl    = +s.sl;
-    const tp1   = +s.tp1, tp2 = +s.tp2, tp3 = s.tp3 ? +s.tp3 : null;
+    const sl  = +s.sl;
+    const tp1 = +s.tp1, tp2 = +s.tp2, tp3 = s.tp3 ? +s.tp3 : null;
+
+    const d1 = Math.abs(tp1 - entry);
+    const d2 = tp2 ? Math.abs(tp2 - entry) : 0;
+    const d3 = tp3 ? Math.abs(tp3 - entry) : 0;
+    const dsl = Math.abs(sl - entry);
 
     if (s.status === 'CLOSED') {
-      // 止損：3張全虧
-      const dist = Math.abs(entry - sl);
-      return -(dist * PIP_VAL * 3);
+      return -(dsl * UNIT * 3);
     }
     if (s.tp3_hit && tp3) {
-      // 只算TP3那1張
-      const dist = Math.abs(tp3 - entry);
-      return dist * PIP_VAL * 1;
+      return (d1 + d2 + d3) * UNIT;
     }
     if (s.tp2_hit) {
-      // 只算TP2那1張
-      const dist = Math.abs(tp2 - entry);
-      return dist * PIP_VAL * 1;
+      return (d1 + d2) * UNIT;
     }
     if (s.tp1_hit) {
-      // 只算TP1那1張
-      const dist = Math.abs(tp1 - entry);
-      return dist * PIP_VAL * 1;
+      return d1 * UNIT;
     }
-    return null; // 進行中/取消/保本 不計算
+    return null;
   }
 
   // ── 統計計數：每個狀態互斥，按最高TP計算 ──
