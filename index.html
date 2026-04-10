@@ -152,7 +152,7 @@ input[type=file]{display:none}
 .sdtab.today{border-color:var(--green);color:var(--green)}
 .sdtab.today.active{background:rgba(61,214,140,.1)}
 .sig-date-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
-.sig-day-stats{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:22px}
+.sig-day-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:22px}
 .sds{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:13px 16px}
 .sds-lbl{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px}
 .sds-val{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500}
@@ -639,18 +639,16 @@ function parseTelegramMsg(text) {
   const slM = text.match(/(?:StopLoss|Stop Loss|SL)[:\s]+([\d.]+)/i);
   if (slM) result.sl = parseFloat(slM[1]);
 
-  // TPs — 每行含 TakeProfit 或 TP
+  // TPs — 每行含 TakeProfit 或 TP，提取第一個4位以上的數字
   const lines = text.split('\n');
   const notes = [];
   lines.forEach(line => {
     if (/takeprofit|take profit/i.test(line)) {
-      // 提取所有數字
-      const nums = line.match(/[\d.]{4,}/g);
+      const nums = line.match(/\d{4,}\.?\d*/g);
       if (nums) {
         result.tps.push(parseFloat(nums[0]));
-        // 如果有範圍如 4790 - 4800，記入 note
         if (nums.length >= 2) {
-          notes.push(`TP${result.tps.length} 範圍: ${nums.join(' - ')}`);
+          notes.push(`TP${result.tps.length} 範圍: ${nums.slice(0,2).join(' - ')}`);
         }
       }
       if (/OPEN/i.test(line)) notes.push(`TP${result.tps.length} OPEN`);
@@ -779,33 +777,79 @@ const SIG_ST_PILL  = { PENDING:'pend', ACTIVE:'canc', TP1_HIT:'tp1', TP2_HIT:'tp
 function renderSigCards(date) {
   const items = sigSetups.filter(s => toKSTDateSig(s.created_at) === date);
 
-  // 統計
-  // 計算盈利：TP1=tp1值, TP2=tp2值, TP3=tp3值加總
-  const calcProfit = (s) => {
-    let p = 0;
-    if (s.tp1_hit && s.tp1) p += (+s.tp1);
-    if (s.tp2_hit && s.tp2) p += (+s.tp2);
-    if (s.tp3_hit && s.tp3) p += (+s.tp3);
-    return p;
-  };
-  const totalProfit = items.filter(s => s.tp1_hit || s.tp2_hit || s.tp3_hit)
-    .reduce((sum, s) => {
-      const tps = [];
-      if (s.tp1_hit && s.tp1) tps.push(+s.tp1);
-      if (s.tp2_hit && s.tp2) tps.push(+s.tp2);
-      if (s.tp3_hit && s.tp3) tps.push(+s.tp3);
-      return sum + tps.reduce((a,b)=>a+b,0);
-    }, 0);
+  // ── 盈虧計算 ──
+  // 0.05手×3張，每到TP減1張，每pip = 0.05×10 = 0.5 USD
+  // 規則：TP達到哪個就算哪個，不累加前面的TP
+  // 止損：3張全虧 = (entry - sl) × 3 × 0.05 × 10
+  const LOT = 0.05, LOTS = 3, PIP_VAL = 0.5; // 每0.01點=0.5USD(0.05手)
+
+  function calcPnl(s) {
+    const entry = (+s.entry_low + +s.entry_high) / 2;
+    const sl    = +s.sl;
+    const tp1   = +s.tp1, tp2 = +s.tp2, tp3 = s.tp3 ? +s.tp3 : null;
+    const isBuy = s.direction === 'BUY';
+    const sign  = isBuy ? 1 : -1;
+
+    if (s.status === 'CLOSED') {
+      // 止損：3張全虧
+      const slPips = Math.abs(entry - sl) * 100;
+      return -(slPips * PIP_VAL * LOTS);
+    }
+    if (s.tp3_hit && tp3) {
+      // 只算TP3：1張
+      const pips = Math.abs(tp3 - entry) * 100;
+      return pips * PIP_VAL * 1;
+    }
+    if (s.tp2_hit) {
+      // 只算TP2：1張
+      const pips = Math.abs(tp2 - entry) * 100;
+      return pips * PIP_VAL * 1;
+    }
+    if (s.tp1_hit) {
+      // 只算TP1：1張
+      const pips = Math.abs(tp1 - entry) * 100;
+      return pips * PIP_VAL * 1;
+    }
+    return null; // 進行中/取消/保本 不算
+  }
+
+  // ── 統計計數：每個狀態互斥，按最高TP計算 ──
+  const cnt_tp3      = items.filter(s => s.tp3_hit).length;
+  const cnt_tp2      = items.filter(s => s.tp2_hit && !s.tp3_hit).length;
+  const cnt_tp1      = items.filter(s => s.tp1_hit && !s.tp2_hit && !s.tp3_hit).length;
+  const cnt_be       = items.filter(s => s.status === 'ACTIVE' && !s.tp1_hit).length;
+  const cnt_cancel   = items.filter(s => s.status === 'CANCELLED').length;
+  const cnt_sl       = items.filter(s => s.status === 'CLOSED').length;
+  const cnt_pending  = items.filter(s => s.status === 'PENDING').length;
+  // 合計應等於 items.length
+  const cnt_total = cnt_tp3 + cnt_tp2 + cnt_tp1 + cnt_be + cnt_cancel + cnt_sl + cnt_pending;
+
+  // ── 盈虧統計 ──
+  const pnlList = items.map(s => calcPnl(s)).filter(v => v !== null);
+  const totalPnl  = pnlList.reduce((a,b) => a+b, 0);
+  const grossWin  = pnlList.filter(v => v > 0).reduce((a,b) => a+b, 0);
+  const grossLoss = pnlList.filter(v => v < 0).reduce((a,b) => a+b, 0);
+  const winRate   = pnlList.length > 0
+    ? (pnlList.filter(v=>v>0).length / pnlList.length * 100).toFixed(0)
+    : '—';
+  const pnlColor  = totalPnl >= 0 ? 'var(--green)' : 'var(--red)';
 
   document.getElementById('sig-day-stats').innerHTML = `
-    <div class="sds"><div class="sds-lbl">總訊號</div><div class="sds-val" style="color:var(--gold)">${items.length}</div></div>
-    <div class="sds"><div class="sds-lbl">TP1 ✓</div><div class="sds-val" style="color:var(--purple)">${items.filter(s=>s.tp1_hit).length}</div></div>
-    <div class="sds"><div class="sds-lbl">TP2 ✓</div><div class="sds-val" style="color:var(--purple)">${items.filter(s=>s.tp2_hit).length}</div></div>
-    <div class="sds"><div class="sds-lbl">TP3 ✓</div><div class="sds-val" style="color:var(--purple)">${items.filter(s=>s.tp3_hit).length}</div></div>
-    <div class="sds"><div class="sds-lbl">保本</div><div class="sds-val" style="color:var(--blue)">${items.filter(s=>s.status==='ACTIVE').length}</div></div>
-    <div class="sds"><div class="sds-lbl">取消</div><div class="sds-val">${items.filter(s=>s.status==='CANCELLED').length}</div></div>
-    <div class="sds"><div class="sds-lbl">止損</div><div class="sds-val" style="color:var(--red)">${items.filter(s=>s.status==='CLOSED').length}</div></div>
-    <div class="sds"><div class="sds-lbl">TP 總點數</div><div class="sds-val" style="color:var(--green)">${totalProfit > 0 ? totalProfit.toFixed(0) : '0'}</div></div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin-bottom:10px">
+      <div class="sds"><div class="sds-lbl">總訊號</div><div class="sds-val" style="color:var(--gold)">${items.length}</div></div>
+      <div class="sds"><div class="sds-lbl">TP1 ✓</div><div class="sds-val" style="color:var(--purple)">${cnt_tp1}</div></div>
+      <div class="sds"><div class="sds-lbl">TP2 ✓</div><div class="sds-val" style="color:var(--purple)">${cnt_tp2}</div></div>
+      <div class="sds"><div class="sds-lbl">TP3 ✓</div><div class="sds-val" style="color:var(--purple)">${cnt_tp3}</div></div>
+      <div class="sds"><div class="sds-lbl">保本</div><div class="sds-val" style="color:var(--blue)">${cnt_be}</div></div>
+      <div class="sds"><div class="sds-lbl">取消</div><div class="sds-val" style="color:var(--muted2)">${cnt_cancel}</div></div>
+      <div class="sds"><div class="sds-lbl">止損</div><div class="sds-val" style="color:var(--red)">${cnt_sl}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px">
+      <div class="sds"><div class="sds-lbl">預計盈虧</div><div class="sds-val" style="color:${pnlColor}">${totalPnl>=0?'+':''}${totalPnl.toFixed(2)} USD</div></div>
+      <div class="sds"><div class="sds-lbl">總盈利</div><div class="sds-val" style="color:var(--green)">+${grossWin.toFixed(2)} USD</div></div>
+      <div class="sds"><div class="sds-lbl">總虧損</div><div class="sds-val" style="color:var(--red)">${grossLoss.toFixed(2)} USD</div></div>
+      <div class="sds"><div class="sds-lbl">勝率</div><div class="sds-val" style="color:${parseFloat(winRate)>=50?'var(--green)':'var(--red)'}">${winRate}${winRate!=='—'?'%':''}</div></div>
+    </div>
   `;
 
   const el = document.getElementById('sig-cards');
@@ -826,8 +870,11 @@ function renderSigCards(date) {
       </div>` : '';
     const noteHtml = s.note ? `<div class="scard-note">📝 ${s.note}</div>` : '';
     const ctime = toKSTTimeSig(s.created_at);
+    const pnl = calcPnl(s);
+    const pnlHtml = pnl !== null
+      ? `<span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:${pnl>=0?'var(--green)':'var(--red)'};">${pnl>=0?'+':''}${pnl.toFixed(2)} USD</span>`
+      : '';
 
-    // 動作按鈕 — 固定顯示所有操作
     const actions = `
       <button class="sact" onclick="updateSigStatus('${s.id}','TP1_HIT')">TP1</button>
       <button class="sact" onclick="updateSigStatus('${s.id}','TP2_HIT')">TP2</button>
@@ -836,6 +883,7 @@ function renderSigCards(date) {
       <button class="sact" onclick="updateSigStatus('${s.id}','CANCELLED')">取消</button>
       <button class="sact" onclick="updateSigStatus('${s.id}','SL_HIT')">止損</button>
       <button class="sact del" onclick="deleteSig('${s.id}')">刪除</button>
+      ${pnlHtml}
     `;
 
     return `<div class="scard ${stCls}">
