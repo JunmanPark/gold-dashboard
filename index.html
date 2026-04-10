@@ -152,7 +152,7 @@ input[type=file]{display:none}
 .sdtab.today{border-color:var(--green);color:var(--green)}
 .sdtab.today.active{background:rgba(61,214,140,.1)}
 .sig-date-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px}
-.sig-day-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:22px}
+.sig-day-stats{margin-bottom:22px}
 .sds{background:var(--bg2);border:1px solid var(--border);border-radius:3px;padding:13px 16px}
 .sds-lbl{font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted2);margin-bottom:5px}
 .sds-val{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500}
@@ -639,17 +639,14 @@ function parseTelegramMsg(text) {
   const slM = text.match(/(?:StopLoss|Stop Loss|SL)[:\s]+([\d.]+)/i);
   if (slM) result.sl = parseFloat(slM[1]);
 
-  // TPs — 每行含 TakeProfit 或 TP，提取第一個4位以上的數字
+  // TPs — 每行含 TakeProfit，逐行提取，同一行有多個數字也各算一個TP
   const lines = text.split('\n');
   const notes = [];
   lines.forEach(line => {
     if (/takeprofit|take profit/i.test(line)) {
       const nums = line.match(/\d{4,}\.?\d*/g);
       if (nums) {
-        result.tps.push(parseFloat(nums[0]));
-        if (nums.length >= 2) {
-          notes.push(`TP${result.tps.length} 範圍: ${nums.slice(0,2).join(' - ')}`);
-        }
+        nums.forEach(n => result.tps.push(parseFloat(n)));
       }
       if (/OPEN/i.test(line)) notes.push(`TP${result.tps.length} OPEN`);
     }
