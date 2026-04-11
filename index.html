@@ -880,7 +880,13 @@ function renderSigCards(date) {
     return;
   }
 
-  el.innerHTML = items.map((s, i) => {
+  // 按時間升序排列，Setup編號=i+1，但顯示時反轉讓最新在最上面
+  const sorted = [...items].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
+  const numbered = sorted.map((s, i) => ({ ...s, setupNum: i + 1 }));
+  const displayed = [...numbered].reverse();
+
+  el.innerHTML = displayed.map((s) => {
+    const setupNum = s.setupNum;
     const dirCls = s.direction === 'BUY' ? 'sp-buy' : 'sp-sell';
     const stCls  = SIG_ST_CLS[s.status]  || 'sp';
     const stLbl  = SIG_ST_LABEL[s.status] || s.status;
@@ -911,7 +917,7 @@ function renderSigCards(date) {
     return `<div class="scard ${stCls}">
       <div class="scard-top">
         <div class="scard-tl">
-          <span class="scard-num">Setup #${items.length - i}</span>
+          <span class="scard-num">Setup #${setupNum}</span>
           <span class="spill ${dirCls}">${s.direction}</span>
         </div>
         <div class="scard-tr">
