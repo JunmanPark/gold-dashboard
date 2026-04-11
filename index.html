@@ -461,9 +461,11 @@ async function initAuth(){
 // Override save/load with Supabase
 async function getData(){
   if(!currentUser)return[];
+  const chs=ACCS[cur].chs;
   const{data,error}=await supa.from('trades').select('*')
     .eq('user_id',currentUser.id)
     .eq('account_type',cur)
+    .in('source', chs)
     .order('open_time',{ascending:false});
   if(error){console.error(error);return[];}
   return(data||[]).map(r=>({
