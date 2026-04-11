@@ -288,8 +288,13 @@ let currentUser = null;
     <div class="sig-wrap">
       <!-- 輸入區 -->
       <textarea class="sig-textarea" id="sig-input" placeholder="貼上 Telegram 訊號訊息，例如：&#10;💵 BUY XAU/USD 4773 - 4776💵&#10;❌StopLoss: 4770&#10;✔️TakeProfit: 4780&#10;✔️TakeProfit: 4790 - 4800 - OPEN"></textarea>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
         <button class="sig-parse-btn" onclick="parseSigInput()" style="margin-bottom:0">解析訊號</button>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px">日期</span>
+          <input id="sig-date-pick" type="date" style="background:var(--bg2);border:1px solid var(--border2);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:5px 10px;border-radius:2px;outline:none;cursor:pointer">
+          <button onclick="setSigDateToday()" style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;background:none;border:1px solid var(--border2);color:var(--muted2);padding:5px 10px;cursor:pointer;border-radius:2px;transition:all .2s" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted2)'">今天</button>
+        </div>
         <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted2);letter-spacing:1px">貼上訊息後點解析，確認後儲存</span>
       </div>
       <!-- 預覽 -->
@@ -430,6 +435,7 @@ async function initAuth(){
     document.getElementById('login-overlay').style.display='none';
     document.getElementById('user-info').style.display='flex';
     document.getElementById('user-email').textContent=currentUser.email;
+    initSigDatePick();
     updF();rAll();
     const ms=missing(await getData());
     if(ms.length){const ab=document.getElementById('abar');ab.textContent=`⚠️ 缺失數據：${ms.slice(0,5).join('、')}${ms.length>5?` 等 ${ms.length} 天`:''}  —  請確認是否需要補充上傳`;ab.classList.add('show');}
@@ -676,8 +682,29 @@ function closeSigPreview() {
   document.getElementById('sig-preview').classList.remove('show');
 }
 
+function initSigDatePick() {
+  // 預設今天（KST）
+  const now = new Date(new Date().getTime() + 9*3600*1000);
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth()+1).padStart(2,'0');
+  const d = String(now.getUTCDate()).padStart(2,'0');
+  document.getElementById('sig-date-pick').value = `${y}-${m}-${d}`;
+}
+
+function setSigDateToday() {
+  initSigDatePick();
+}
+
 async function saveSig() {
   if (!currentUser) return alert('請先登入');
+
+  // 取得選擇的日期，轉成 ISO（當天 12:00 KST = 03:00 UTC）
+  const dateVal = document.getElementById('sig-date-pick').value;
+  if (!dateVal) return alert('請選擇日期');
+  const [y, m, d] = dateVal.split('-').map(Number);
+  // 用 KST 12:00 存入，確保日期顯示正確
+  const created_at = new Date(Date.UTC(y, m-1, d, 3, 0, 0)).toISOString();
+
   const record = {
     id:          `MANUAL_${Date.now()}`,
     channel:     'EMPIRE',
@@ -693,13 +720,15 @@ async function saveSig() {
     tp1_hit:     false,
     tp2_hit:     false,
     tp3_hit:     false,
-    created_at:  new Date().toISOString(),
+    created_at,
     updated_at:  new Date().toISOString(),
   };
   const { error } = await supa.from(SIG_TABLE).insert(record);
   if (error) return alert('儲存失敗: ' + error.message);
   closeSigPreview();
   document.getElementById('sig-input').value = '';
+  // 儲存後跳到該日期
+  sigSelectedDate = toKSTDateSig(created_at);
   await loadSigSetups();
   alert('✅ 訊號已儲存');
 }
